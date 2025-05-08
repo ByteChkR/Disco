@@ -6,10 +6,11 @@ namespace Disco.Core.Queue;
 
 public interface IDiscoTaskQueue
 {
-    bool IsEmpty { get; }
+    Task<bool> IsEmpty();
     Task<DiscoTask> WaitForTask(DiscoWorkerCapabilities capabilities, CancellationToken cancellationToken);
-    Task Enqueue(string taskRunnerName, int priority, JToken data, params string[] additionalCapabilities);
-    Task SubmitResult(DiscoTask task, DiscoResult result);
+    Task<DiscoTask?> TryWaitForTask(DiscoWorkerCapabilities capabilities, CancellationToken cancellationToken);
+    Task<Guid> Enqueue(string taskRunnerName, int priority, JToken data, params string[] additionalCapabilities);
+    Task SubmitResult(DiscoResult result);
     Task<DiscoResult?> TryGetResult(Guid taskId);
     Task<DiscoResult> GetResult(Guid taskId, CancellationToken token);
 }

@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Disco.Test", "Disco.Test\Di
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Disco.Core", "Disco.Core\Disco.Core.csproj", "{57D3A933-E324-4680-BFF7-8CD8E599D738}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Disco.Remote", "Disco.Remote\Disco.Remote.csproj", "{F20D82C3-BFF1-4C12-B83E-02C0F3B6DBF6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{57D3A933-E324-4680-BFF7-8CD8E599D738}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{57D3A933-E324-4680-BFF7-8CD8E599D738}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{57D3A933-E324-4680-BFF7-8CD8E599D738}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F20D82C3-BFF1-4C12-B83E-02C0F3B6DBF6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F20D82C3-BFF1-4C12-B83E-02C0F3B6DBF6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F20D82C3-BFF1-4C12-B83E-02C0F3B6DBF6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F20D82C3-BFF1-4C12-B83E-02C0F3B6DBF6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

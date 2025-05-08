@@ -1,7 +1,8 @@
+using Disco.Core.Queue;
 using Disco.Core.Tasks;
 using Disco.Core.Worker;
 
-namespace Disco.Core.Queue;
+namespace Disco.Core;
 
 public class DiscoNode
 {
@@ -9,15 +10,17 @@ public class DiscoNode
     private readonly CancellationTokenSource _cts = new();
     public string Name { get; }
     public int WorkerCount { get; }
-    public IDiscoTaskQueue Queue { get; }
+    public Func<int, IDiscoTaskQueue> QueueFactory { get; }
     public string[] Capabilities { get; }
     private readonly List<DiscoTaskRunner> _runners = new();
-    public DiscoNode(string name, int workerCount, IDiscoTaskQueue queue, params string[] additionalCapabilities)
+    public IDiscoTaskQueue Queue { get; }
+    public DiscoNode(string name, int workerCount, Func<int, IDiscoTaskQueue> queueFactory, params string[] additionalCapabilities)
     {
         Name = name;
         WorkerCount = workerCount;
-        Queue = queue;
+        QueueFactory = queueFactory;
         Capabilities = additionalCapabilities;
+        Queue = QueueFactory(-1);
     }
     
     public DiscoNode AddRunner(DiscoTaskRunner runner)
@@ -37,7 +40,7 @@ public class DiscoNode
         for (int i = 0; i < WorkerCount; i++)
         {
             var workerInfo = new DiscoWorkerInfo(Guid.NewGuid(), Name + "-" + i);
-            var worker = new DiscoWorker(workerInfo, Queue)
+            var worker = new DiscoWorker(workerInfo, QueueFactory(i))
                 .AddRunner(_runners);
             _workers.Add(worker);
             _ = worker.Run(_cts.Token);
@@ -57,7 +60,8 @@ public class DiscoNode
 
     public async Task WaitForIdle()
     {
-        while(_workers.Any(x=>!x.IsIdle) || !Queue.IsEmpty)await Task.Delay(100);
+        while(_workers.Any(x=>!x.IsIdle) || !await Queue.IsEmpty())
+            await Task.Delay(100);
     }
 
     public void GracefulStop()

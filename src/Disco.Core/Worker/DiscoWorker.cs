@@ -90,7 +90,7 @@ public class DiscoWorker
 
                 var result = new DiscoResult(task.Id, false, data, traceSessionData);
 
-                await _queue.SubmitResult(task, result);
+                await _queue.SubmitResult(result);
             }
         }
         finally

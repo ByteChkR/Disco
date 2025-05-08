@@ -1,6 +1,6 @@
 namespace Disco.Core.Worker;
 
-public readonly struct DiscoWorkerCapabilities
+public struct DiscoWorkerCapabilities
 {
     public DiscoWorkerCapabilities(DiscoWorkerInfo workerInfo, string[] capabilities)
     {
@@ -8,6 +8,6 @@ public readonly struct DiscoWorkerCapabilities
         Capabilities = capabilities;
     }
 
-    public DiscoWorkerInfo WorkerInfo { get; }
-    public string[] Capabilities { get; }
+    public DiscoWorkerInfo WorkerInfo { get; set; }
+    public string[] Capabilities { get; set; }
 }
