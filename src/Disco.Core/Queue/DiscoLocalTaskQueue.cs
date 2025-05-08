@@ -20,7 +20,6 @@ public class DiscoLocalTaskQueue : IDiscoTaskQueue
     {
         while(!cancellationToken.IsCancellationRequested)
         {
-            await _semaphore.WaitAsync(cancellationToken);
             var task = await TryWaitForTask(capabilities, cancellationToken);
             if (task != null) return task;
             await Task.Delay(100, cancellationToken);
@@ -58,11 +57,14 @@ public class DiscoLocalTaskQueue : IDiscoTaskQueue
         return task;
     }
 
-    public Task<Guid> Enqueue(string taskRunnerName, int priority, JToken data, params string[] additionalCapabilities)
+    public async Task<Guid> Enqueue(string taskRunnerName, int priority, JToken data, params string[] additionalCapabilities)
     {
         var t = new DiscoTask(Guid.NewGuid(), taskRunnerName, data, priority, additionalCapabilities);
+        
+        await _semaphore.WaitAsync();
         _queue.Enqueue(t,t);
-        return Task.FromResult(t.Id);
+        _semaphore.Release();
+        return t.Id;
     }
 
     public Task<DiscoResult?> TryGetResult(Guid taskId)
