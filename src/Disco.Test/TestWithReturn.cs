@@ -1,6 +1,8 @@
 using Disco.Core;
 using Disco.Core.Queue;
+using Disco.Core.Tasks;
 using Disco.Test.TaskTypes;
+
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -11,18 +13,20 @@ internal static class TestWithReturn
     public static async Task Run(string[] args)
     {
         //Create a Task Queue that is local to this process
-        var queue = new DiscoLocalTaskQueue();
+        DiscoLocalTaskQueue queue = new DiscoLocalTaskQueue();
+
         //Configure a Node that will process the tasks
-        var node = new DiscoNode("Node", 100, i=> queue)
+        DiscoNode node = new DiscoNode("Node", 100, i => queue)
             //Add the WaitForTask Implementation.
             //This makes this node capable of accepting tasks of this type
             .AddRunner<AddTask>();
-        
+
         //Start the node
         node.Run();
-        
-        var a = new AddArgs { A = 1, B = 2 };
-        var result = await queue.EnqueueAndWait(CancellationToken.None, AddTask.NAME, 1, JToken.FromObject(a));
+
+        AddArgs a = new AddArgs { A = 1, B = 2 };
+        DiscoResult result = await queue.EnqueueAndWait(CancellationToken.None, AddTask.NAME, 1, JToken.FromObject(a));
+
         if (result.IsError)
         {
             throw new InvalidOperationException("Error in task: " + result.Data.ToString(Formatting.Indented));

@@ -3,6 +3,7 @@ using Disco.Core.Queue;
 using Disco.Remote;
 using Disco.Remote.Server;
 using Disco.Test.TaskTypes;
+
 using Newtonsoft.Json.Linq;
 
 namespace Disco.Test;
@@ -11,10 +12,11 @@ internal static class TestRemote
 {
     private static async Task FillQueue(IDiscoTaskQueue queue, int count)
     {
-        var rnd = new Random();
+        Random rnd = new Random();
+
         for (int i = 0; i < count; i++)
         {
-            var a = new WaitForArgs { Delay = rnd.Next(100, 1000)};
+            WaitForArgs a = new WaitForArgs { Delay = rnd.Next(100, 1000) };
             //Wait for random time with different priorities
             Console.WriteLine($"Enqueueing Task {i}");
             await queue.Enqueue(WaitForTask.NAME, rnd.Next(1, 3), JToken.FromObject(a));
@@ -25,26 +27,27 @@ internal static class TestRemote
     {
         return DiscoRemote.CreateServer(new DiscoLocalTaskQueue(), prefixes);
     }
+
     public static async Task Run(string[] args)
     {
         //Create the server
-        var serverCts = new CancellationTokenSource();
-        var prefix = "http://localhost:4578/";
-        var server = CreateServer(prefix);
+        CancellationTokenSource serverCts = new CancellationTokenSource();
+        string prefix = "http://localhost:4578/";
+        IDiscoRemoteServer server = CreateServer(prefix);
         server.Start(serverCts.Token);
-        
+
         //Create a client
-        var client = DiscoRemote.CreateClient(prefix);
-        
+        IDiscoTaskQueue client = DiscoRemote.CreateClient(prefix);
+
         //Add Test Data
         await FillQueue(client, 100);
 
         //Configure a Node that will process the tasks
-        var node = new DiscoNode("Node", 100, i => DiscoRemote.CreateClient(prefix))
+        DiscoNode node = new DiscoNode("Node", 100, i => DiscoRemote.CreateClient(prefix))
             //Add the WaitForTask Implementation.
             //This makes this node capable of accepting tasks of this type
             .AddRunner<WaitForTask>();
-        
+
         //Start the node
         node.Run();
 

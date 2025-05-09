@@ -1,6 +1,7 @@
 using Disco.Core.Queue;
 using Disco.Core.Tasks;
 using Disco.Core.Worker;
+
 using Newtonsoft.Json;
 
 namespace Disco.Core;
@@ -11,6 +12,7 @@ public class DiscoWorkerConfig
     public int Replicas { get; set; }
     public string[] Capabilities { get; set; } = [];
 }
+
 public class DiscoNodeConfig
 {
     public string Name { get; set; } = "DefaultNode";
@@ -18,24 +20,37 @@ public class DiscoNodeConfig
     public DiscoWorkerConfig[] Workers { get; set; } = [];
 }
 
-
-
 public class DiscoNode
 {
-    private readonly List<DiscoWorker> _workers = new();
-    private readonly CancellationTokenSource _cts = new();
+    private readonly CancellationTokenSource _cts = new CancellationTokenSource();
+    private readonly List<DiscoTaskRunner> _runners = new List<DiscoTaskRunner>();
+    private readonly List<DiscoWorker> _workers = new List<DiscoWorker>();
+
+    private DiscoNodeConfig? _config;
+
+    public DiscoNode(string name,
+                     int workerCount,
+                     Func<int, IDiscoTaskQueue> queueFactory,
+                     params string[] additionalCapabilities)
+    {
+        Name = name;
+        WorkerCount = workerCount;
+        QueueFactory = queueFactory;
+        Capabilities = additionalCapabilities;
+        Queue = QueueFactory(-1);
+    }
+
     public string Name { get; }
     public int WorkerCount { get; }
     public Func<int, IDiscoTaskQueue> QueueFactory { get; }
     public string[] Capabilities { get; }
-    private readonly List<DiscoTaskRunner> _runners = new();
     public IDiscoTaskQueue Queue { get; }
 
-    private DiscoNodeConfig? _config;
     public static DiscoNode FromConfig(DiscoNodeConfig config, Func<int, IDiscoTaskQueue> queue)
     {
-        var node = new DiscoNode(config.Name, config.Workers.Sum(x=>x.Replicas), queue, config.Capabilities);
+        DiscoNode node = new DiscoNode(config.Name, config.Workers.Sum(x => x.Replicas), queue, config.Capabilities);
         node._config = config;
+
         return node;
     }
 
@@ -48,42 +63,44 @@ public class DiscoNode
     {
         return FromJson(File.ReadAllText(path), queue);
     }
-    
-    public DiscoNode(string name, int workerCount, Func<int, IDiscoTaskQueue> queueFactory, params string[] additionalCapabilities)
-    {
-        Name = name;
-        WorkerCount = workerCount;
-        QueueFactory = queueFactory;
-        Capabilities = additionalCapabilities;
-        Queue = QueueFactory(-1);
-    }
-    
+
     public DiscoNode AddRunner(DiscoTaskRunner runner)
     {
         _runners.Add(runner);
-        return this;
-    }
-    public DiscoNode AddRunner<T>() where T : DiscoTaskRunner, new()
-    {
-        var runner = new T();
-        _runners.Add(runner);
+
         return this;
     }
 
-    public Task Run()
+    public DiscoNode AddRunner<T>() where T : DiscoTaskRunner, new()
     {
-        List<Task> tasks = new();
+        T runner = new T();
+        _runners.Add(runner);
+
+        return this;
+    }
+
+    public async Task Run()
+    {
+        List<Task> tasks = new List<Task>();
+
         if (_config != null)
         {
-            foreach (var workerConfig in _config.Workers)
+            foreach (DiscoWorkerConfig workerConfig in _config.Workers)
             {
                 for (int i = 0; i < workerConfig.Replicas; i++)
                 {
-                    var workerInfo = new DiscoWorkerInfo(Guid.NewGuid(), Name + "-" + workerConfig.Name + +i);
-                    var worker = new DiscoWorker(workerInfo, QueueFactory(i), workerConfig.Capabilities.Concat(Capabilities).ToArray())
+                    DiscoWorkerInfo workerInfo =
+                        new DiscoWorkerInfo(Guid.NewGuid(), Name + "-" + workerConfig.Name + +i);
+
+                    DiscoWorker worker = new DiscoWorker(workerInfo,
+                                                         QueueFactory(i),
+                                                         workerConfig.Capabilities.Concat(Capabilities)
+                                                                     .ToArray()
+                                                        )
                         .AddRunner(_runners);
                     _workers.Add(worker);
-                    tasks.Add(worker.Run(_cts.Token));
+                    Task t = Task.Run(async () => await worker.Run(_cts.Token));
+                    tasks.Add(t);
                 }
             }
         }
@@ -91,15 +108,17 @@ public class DiscoNode
         {
             for (int i = 0; i < WorkerCount; i++)
             {
-                var workerInfo = new DiscoWorkerInfo(Guid.NewGuid(), Name + "-" + i);
-                var worker = new DiscoWorker(workerInfo, QueueFactory(i), Capabilities)
+                DiscoWorkerInfo workerInfo = new DiscoWorkerInfo(Guid.NewGuid(), Name + "-" + i);
+
+                DiscoWorker worker = new DiscoWorker(workerInfo, QueueFactory(i), Capabilities)
                     .AddRunner(_runners);
                 _workers.Add(worker);
-                tasks.Add(worker.Run(_cts.Token));
+                Task t = Task.Run(async () => await worker.Run(_cts.Token));
+                tasks.Add(t);
             }
         }
-        
-        return Task.WhenAll(tasks);
+
+        await Task.WhenAll(tasks).ConfigureAwait(false);
     }
 
     public void Stop()
@@ -109,22 +128,24 @@ public class DiscoNode
 
     public async Task StopOnIdle()
     {
-        await WaitForIdle();
+        await WaitForIdle().ConfigureAwait(false);
         Stop();
     }
 
     public async Task WaitForIdle()
     {
-        while(_workers.Any(x=>!x.IsIdle) || !await Queue.IsEmpty())
-            await Task.Delay(100);
+        while (_workers.Any(x => !x.IsIdle) || !await Queue.IsEmpty())
+        {
+            await Task.Delay(100).ConfigureAwait(false);
+        }
     }
 
     public void GracefulStop()
     {
         // check all workers and remove only those that are idle
-        foreach (var worker in _workers)
+        foreach (DiscoWorker worker in _workers)
         {
-            if(!worker.IsStopping)
+            if (!worker.IsStopping)
             {
                 worker.GracefulStop();
             }

@@ -8,14 +8,14 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Disco.Core\Disco.Core.csproj" />
-      <ProjectReference Include="..\Disco.Remote\Disco.Remote.csproj" />
+        <ProjectReference Include="..\Disco.Core\Disco.Core.csproj"/>
+        <ProjectReference Include="..\Disco.Remote\Disco.Remote.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
-      <None Update="nodeconfig.json">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
+        <None Update="nodeconfig.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
     </ItemGroup>
 
 </Project>

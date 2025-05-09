@@ -8,33 +8,49 @@ namespace Disco.Remote;
 
 public static class DiscoRemote
 {
-    public static IDiscoRemoteServer CreateServer(IDiscoTaskQueue queue, params string[] prefixes) => new DiscoRemoteServer(queue, prefixes);
+    public static IDiscoRemoteServer CreateServer(IDiscoTaskQueue queue, params string[] prefixes)
+    {
+        return new DiscoRemoteServer(queue, prefixes);
+    }
 
     public static IDiscoTaskQueue CreateClient(string baseUrl)
     {
-        var client = new HttpClient();
+        HttpClient client = new HttpClient();
         client.BaseAddress = new Uri(baseUrl);
+
         return new DiscoRemoteTaskQueue(client);
     }
 
-    internal static DiscoResultDto ToDto(this DiscoResult result) => new DiscoResultDto
+    internal static DiscoResultDto ToDto(this DiscoResult result)
     {
-        TaskId = result.TaskId,
-        IsError = result.IsError,
-        Data = result.Data,
-        TraceSessionData = result.TraceSessionData
-    };
-    
-    internal static DiscoTaskDto ToDto(this DiscoTask task) => new DiscoTaskDto
+        return new DiscoResultDto
+        {
+            TaskId = result.TaskId,
+            IsError = result.IsError,
+            Data = result.Data,
+            TraceSessionData = result.TraceSessionData,
+        };
+    }
+
+    internal static DiscoTaskDto ToDto(this DiscoTask task)
     {
-        Id = task.Id,
-        TaskRunnerName = task.TaskRunnerName,
-        Data = task.Data,
-        Priority = task.Priority,
-        AdditionalCapabilities = task.AdditionalCapabilities
-    };
-    
-    internal static DiscoResult ToResult(this DiscoResultDto result) => new DiscoResult(result.TaskId, result.IsError, result.Data, result.TraceSessionData);
-    
-    internal static DiscoTask ToTask(this DiscoTaskDto task) => new DiscoTask(task.Id, task.TaskRunnerName, task.Data, task.Priority, task.AdditionalCapabilities);
+        return new DiscoTaskDto
+        {
+            Id = task.Id,
+            TaskRunnerName = task.TaskRunnerName,
+            Data = task.Data,
+            Priority = task.Priority,
+            AdditionalCapabilities = task.AdditionalCapabilities,
+        };
+    }
+
+    internal static DiscoResult ToResult(this DiscoResultDto result)
+    {
+        return new DiscoResult(result.TaskId, result.IsError, result.Data, result.TraceSessionData);
+    }
+
+    internal static DiscoTask ToTask(this DiscoTaskDto task)
+    {
+        return new DiscoTask(task.Id, task.TaskRunnerName, task.Data, task.Priority, task.AdditionalCapabilities);
+    }
 }

@@ -1,15 +1,18 @@
 using System.Collections.Concurrent;
+
 using Disco.Core.Tasks;
 using Disco.Core.Worker;
+
 using Newtonsoft.Json.Linq;
 
 namespace Disco.Core.Queue;
 
 public class DiscoLocalTaskQueue : IDiscoTaskQueue
 {
-    private readonly PriorityQueue<DiscoTask, DiscoTask> _queue = new();
-    private readonly ConcurrentDictionary<Guid, DiscoResult> _tasks = new();
-    private SemaphoreSlim _semaphore = new(1, 1);
+    private readonly PriorityQueue<DiscoTask, DiscoTask> _queue = new PriorityQueue<DiscoTask, DiscoTask>();
+    private readonly ConcurrentDictionary<Guid, DiscoResult> _tasks = new ConcurrentDictionary<Guid, DiscoResult>();
+    private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
+#region IDiscoTaskQueue Members
 
     public Task<bool> IsEmpty()
     {
@@ -18,52 +21,67 @@ public class DiscoLocalTaskQueue : IDiscoTaskQueue
 
     public async Task<DiscoTask> WaitForTask(DiscoWorkerCapabilities capabilities, CancellationToken cancellationToken)
     {
-        while(!cancellationToken.IsCancellationRequested)
+        while (!cancellationToken.IsCancellationRequested)
         {
-            var task = await TryWaitForTask(capabilities, cancellationToken);
-            if (task != null) return task;
-            await Task.Delay(100, cancellationToken);
+            DiscoTask? task = await TryWaitForTask(capabilities, cancellationToken).ConfigureAwait(false);
+
+            if (task != null)
+            {
+                return task;
+            }
+
+            await Task.Delay(100, cancellationToken).ConfigureAwait(false);
         }
-        
+
         throw new OperationCanceledException("Task queue was cancelled");
     }
 
-    public async Task<DiscoTask?> TryWaitForTask(DiscoWorkerCapabilities capabilities, CancellationToken cancellationToken)
+    public async Task<DiscoTask?> TryWaitForTask(DiscoWorkerCapabilities capabilities,
+                                                 CancellationToken cancellationToken)
     {
-        await _semaphore.WaitAsync(cancellationToken);
+        await _semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
         DiscoTask? task = null;
+
         if (_queue.Count != 0)
         {
-            List<DiscoTask> tasks = new();
+            List<DiscoTask> tasks = new List<DiscoTask>();
+
             while (_queue.Count != 0)
             {
-                var t = _queue.Dequeue();
+                DiscoTask t = _queue.Dequeue();
+
                 if (t.CanRunOn(capabilities))
                 {
                     task = t;
+
                     break;
                 }
-                    
+
                 tasks.Add(t);
             }
-                
-            foreach (var t in tasks)
+
+            foreach (DiscoTask t in tasks)
             {
                 _queue.Enqueue(t, t);
             }
         }
+
         _semaphore.Release();
-        
+
         return task;
     }
 
-    public async Task<Guid> Enqueue(string taskRunnerName, int priority, JToken data, params string[] additionalCapabilities)
+    public async Task<Guid> Enqueue(string taskRunnerName,
+                                    int priority,
+                                    JToken data,
+                                    params string[] additionalCapabilities)
     {
-        var t = new DiscoTask(Guid.NewGuid(), taskRunnerName, data, priority, additionalCapabilities);
-        
-        await _semaphore.WaitAsync();
-        _queue.Enqueue(t,t);
+        DiscoTask t = new DiscoTask(Guid.NewGuid(), taskRunnerName, data, priority, additionalCapabilities);
+
+        await _semaphore.WaitAsync().ConfigureAwait(false);
+        _queue.Enqueue(t, t);
         _semaphore.Release();
+
         return t.Id;
     }
 
@@ -71,30 +89,31 @@ public class DiscoLocalTaskQueue : IDiscoTaskQueue
     {
         return Task.FromResult(_tasks.GetValueOrDefault(taskId));
     }
-    
+
     public async Task<DiscoResult> GetResult(Guid taskId, CancellationToken token)
     {
-        while(!token.IsCancellationRequested)
+        while (!token.IsCancellationRequested)
         {
-            if (_tasks.TryGetValue(taskId, out var result))
+            if (_tasks.TryGetValue(taskId, out DiscoResult? result))
             {
                 return result;
             }
-            await Task.Delay(100, token);
+
+            await Task.Delay(100, token).ConfigureAwait(false);
         }
-        
+
         throw new OperationCanceledException("Task queue was cancelled");
     }
-    
+
     public Task SubmitResult(DiscoResult result)
     {
         if (_tasks.TryAdd(result.TaskId, result))
         {
             return Task.CompletedTask;
         }
-        else
-        {
-            throw new InvalidOperationException($"Task {result.TaskId} already exists");
-        }
+
+        throw new InvalidOperationException($"Task {result.TaskId} already exists");
     }
+
+#endregion
 }

@@ -1,6 +1,6 @@
 {
   "Name": "Debugging",
-  "Capabilities": [ ],
+  "Capabilities": [],
   "Workers": [
     {
       "Name": "Default",

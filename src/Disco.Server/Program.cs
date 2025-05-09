@@ -1,15 +1,16 @@
 ﻿using Disco.Core.Queue;
 using Disco.Remote;
+using Disco.Remote.Server;
 
 namespace Disco.Server;
 
-class Program
+internal class Program
 {
-    static async Task Main(string[] args)
+    private static async Task Main(string[] args)
     {
-        var serverCts = new CancellationTokenSource();
-        var prefix = "http://localhost:4578/";
-        var server = DiscoRemote.CreateServer(new DiscoLocalTaskQueue(), prefix);
+        CancellationTokenSource serverCts = new CancellationTokenSource();
+        string prefix = "http://localhost:4578/";
+        IDiscoRemoteServer server = DiscoRemote.CreateServer(new DiscoLocalTaskQueue(), prefix);
         await server.StartAsync(serverCts.Token);
     }
 }

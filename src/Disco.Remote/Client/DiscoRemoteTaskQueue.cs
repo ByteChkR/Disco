@@ -1,8 +1,10 @@
 using System.Net;
+
 using Disco.Core.Queue;
 using Disco.Core.Tasks;
 using Disco.Core.Worker;
 using Disco.Remote.Common;
+
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -17,12 +19,16 @@ internal class DiscoRemoteTaskQueue : IDiscoTaskQueue
         _client = client;
     }
 
+#region IDiscoTaskQueue Members
+
     public async Task<bool> IsEmpty()
     {
-        var response = await _client.GetAsync("/queue/isEmpty");
+        HttpResponseMessage response = await _client.GetAsync("/queue/isEmpty").ConfigureAwait(false);
+
         if (response.StatusCode == HttpStatusCode.OK)
         {
-            var content = await response.Content.ReadAsStringAsync();
+            string content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+
             return JsonConvert.DeserializeObject<bool>(content);
         }
 
@@ -31,50 +37,70 @@ internal class DiscoRemoteTaskQueue : IDiscoTaskQueue
 
     public async Task<DiscoTask> WaitForTask(DiscoWorkerCapabilities capabilities, CancellationToken cancellationToken)
     {
-        while(!cancellationToken.IsCancellationRequested)
+        while (!cancellationToken.IsCancellationRequested)
         {
-            var result = await TryWaitForTask(capabilities, cancellationToken);
+            DiscoTask? result = await TryWaitForTask(capabilities, cancellationToken).ConfigureAwait(false);
+
             if (result != null)
+            {
                 return result;
-            
+            }
+
             Thread.Sleep(100);
         }
+
         throw new OperationCanceledException("Task queue was cancelled");
     }
 
-    public async Task<DiscoTask?> TryWaitForTask(DiscoWorkerCapabilities capabilities, CancellationToken cancellationToken)
+    public async Task<DiscoTask?> TryWaitForTask(DiscoWorkerCapabilities capabilities,
+                                                 CancellationToken cancellationToken)
     {
         // POST /queue/waitForTask
         // => Body is capabilities
         // => Returns 200 or 201
         // => Returns DiscoTask if 200
         // => Returns 201 if no task is available(retry later)
-        var response = await _client.PostAsync("/queue/waitForTask", new StringContent(JsonConvert.SerializeObject(capabilities)), cancellationToken);
+        HttpResponseMessage response = await _client.PostAsync("/queue/waitForTask",
+                                                               new StringContent(JsonConvert
+                                                                       .SerializeObject(capabilities)
+                                                                   ),
+                                                               cancellationToken
+                                                              ).ConfigureAwait(false);
+
         if (response.StatusCode == HttpStatusCode.OK)
         {
-            var content = await response.Content.ReadAsStringAsync();
-            var result = JsonConvert.DeserializeObject<DiscoTaskDto>(content);
+            string content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            DiscoTaskDto result = JsonConvert.DeserializeObject<DiscoTaskDto>(content);
+
             return result.ToTask();
         }
+
         if (response.StatusCode == HttpStatusCode.NoContent)
         {
             return null;
         }
-        
+
         throw new Exception("Error while waiting for task");
     }
 
-    public async Task<Guid> Enqueue(string taskRunnerName, int priority, JToken data, params string[] additionalCapabilities)
+    public async Task<Guid> Enqueue(string taskRunnerName,
+                                    int priority,
+                                    JToken data,
+                                    params string[] additionalCapabilities)
     {
         // POST /queue/enqueue/<id>
         // => Body is DiscoTask
         // => Returns 200
-        var task = new DiscoTask(Guid.NewGuid(), taskRunnerName, data, priority, additionalCapabilities);
-        var response = await _client.PostAsync("/queue/enqueue", new StringContent(JsonConvert.SerializeObject(task.ToDto())));
+        DiscoTask task = new DiscoTask(Guid.NewGuid(), taskRunnerName, data, priority, additionalCapabilities);
+
+        HttpResponseMessage response =
+            await _client.PostAsync("/queue/enqueue", new StringContent(JsonConvert.SerializeObject(task.ToDto()))).ConfigureAwait(false);
+
         if (response.StatusCode == HttpStatusCode.OK)
         {
             return task.Id;
         }
+
         throw new Exception("Error while enqueuing task");
     }
 
@@ -83,41 +109,55 @@ internal class DiscoRemoteTaskQueue : IDiscoTaskQueue
         // POST /queue/submitResult/<taskId>
         // => Body is DiscoResult
         // => Returns 200
-        var response = await _client.PostAsync("/queue/submitResult", new StringContent(JsonConvert.SerializeObject(result.ToDto())));
+        HttpResponseMessage response =
+            await _client.PostAsync("/queue/submitResult",
+                                    new StringContent(JsonConvert.SerializeObject(result.ToDto()))
+                                   ).ConfigureAwait(false);
+
         if (response.StatusCode == HttpStatusCode.OK)
         {
             return;
         }
-        
+
         throw new Exception("Error while submitting result");
     }
 
     public async Task<DiscoResult?> TryGetResult(Guid taskId)
     {
-        var response = await _client.GetAsync("/queue/getResult/" + taskId);
+        HttpResponseMessage response = await _client.GetAsync("/queue/getResult/" + taskId).ConfigureAwait(false);
+
         if (response.StatusCode == HttpStatusCode.OK)
         {
-            var content = await response.Content.ReadAsStringAsync();
-            var result = JsonConvert.DeserializeObject<DiscoResultDto>(content);
+            string content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            DiscoResultDto result = JsonConvert.DeserializeObject<DiscoResultDto>(content);
+
             return result.ToResult();
         }
+
         if (response.StatusCode == HttpStatusCode.NoContent)
         {
             return null;
         }
+
         throw new Exception("Error while getting result");
     }
 
     public async Task<DiscoResult> GetResult(Guid taskId, CancellationToken token)
     {
-        while(!token.IsCancellationRequested)
+        while (!token.IsCancellationRequested)
         {
-            var result = await TryGetResult(taskId);
+            DiscoResult? result = await TryGetResult(taskId).ConfigureAwait(false);
+
             if (result != null)
+            {
                 return result;
-            
+            }
+
             Thread.Sleep(100);
         }
+
         throw new OperationCanceledException("Task queue was cancelled");
     }
+
+#endregion
 }

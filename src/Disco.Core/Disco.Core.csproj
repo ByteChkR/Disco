@@ -8,7 +8,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="ewu.trace" Version="24.10.26.4" />
+        <PackageReference Include="ewu.trace" Version="24.10.26.4"/>
     </ItemGroup>
 
 </Project>

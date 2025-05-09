@@ -8,9 +8,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Disco.Core\Disco.Core.csproj" />
-      <ProjectReference Include="..\Disco.Remote\Disco.Remote.csproj" />
-      <ProjectReference Include="..\Disco.Test\Disco.Test.csproj" />
+        <ProjectReference Include="..\Disco.Core\Disco.Core.csproj"/>
+        <ProjectReference Include="..\Disco.Remote\Disco.Remote.csproj"/>
+        <ProjectReference Include="..\Disco.Test\Disco.Test.csproj"/>
     </ItemGroup>
 
 </Project>
