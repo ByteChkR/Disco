@@ -1,8 +1,24 @@
 using Disco.Core.Queue;
 using Disco.Core.Tasks;
 using Disco.Core.Worker;
+using Newtonsoft.Json;
 
 namespace Disco.Core;
+
+public class DiscoWorkerConfig
+{
+    public string Name { get; set; } = "DefaultWorker";
+    public int Replicas { get; set; }
+    public string[] Capabilities { get; set; } = [];
+}
+public class DiscoNodeConfig
+{
+    public string Name { get; set; } = "DefaultNode";
+    public string[] Capabilities { get; set; } = [];
+    public DiscoWorkerConfig[] Workers { get; set; } = [];
+}
+
+
 
 public class DiscoNode
 {
@@ -14,6 +30,25 @@ public class DiscoNode
     public string[] Capabilities { get; }
     private readonly List<DiscoTaskRunner> _runners = new();
     public IDiscoTaskQueue Queue { get; }
+
+    private DiscoNodeConfig? _config;
+    public static DiscoNode FromConfig(DiscoNodeConfig config, Func<int, IDiscoTaskQueue> queue)
+    {
+        var node = new DiscoNode(config.Name, config.Workers.Sum(x=>x.Replicas), queue, config.Capabilities);
+        node._config = config;
+        return node;
+    }
+
+    public static DiscoNode FromJson(string json, Func<int, IDiscoTaskQueue> queue)
+    {
+        return FromConfig(JsonConvert.DeserializeObject<DiscoNodeConfig>(json)!, queue);
+    }
+
+    public static DiscoNode FromFile(string path, Func<int, IDiscoTaskQueue> queue)
+    {
+        return FromJson(File.ReadAllText(path), queue);
+    }
+    
     public DiscoNode(string name, int workerCount, Func<int, IDiscoTaskQueue> queueFactory, params string[] additionalCapabilities)
     {
         Name = name;
@@ -35,16 +70,36 @@ public class DiscoNode
         return this;
     }
 
-    public void Run()
+    public Task Run()
     {
-        for (int i = 0; i < WorkerCount; i++)
+        List<Task> tasks = new();
+        if (_config != null)
         {
-            var workerInfo = new DiscoWorkerInfo(Guid.NewGuid(), Name + "-" + i);
-            var worker = new DiscoWorker(workerInfo, QueueFactory(i))
-                .AddRunner(_runners);
-            _workers.Add(worker);
-            _ = worker.Run(_cts.Token);
+            foreach (var workerConfig in _config.Workers)
+            {
+                for (int i = 0; i < workerConfig.Replicas; i++)
+                {
+                    var workerInfo = new DiscoWorkerInfo(Guid.NewGuid(), Name + "-" + workerConfig.Name + +i);
+                    var worker = new DiscoWorker(workerInfo, QueueFactory(i), workerConfig.Capabilities.Concat(Capabilities).ToArray())
+                        .AddRunner(_runners);
+                    _workers.Add(worker);
+                    tasks.Add(worker.Run(_cts.Token));
+                }
+            }
         }
+        else
+        {
+            for (int i = 0; i < WorkerCount; i++)
+            {
+                var workerInfo = new DiscoWorkerInfo(Guid.NewGuid(), Name + "-" + i);
+                var worker = new DiscoWorker(workerInfo, QueueFactory(i), Capabilities)
+                    .AddRunner(_runners);
+                _workers.Add(worker);
+                tasks.Add(worker.Run(_cts.Token));
+            }
+        }
+        
+        return Task.WhenAll(tasks);
     }
 
     public void Stop()

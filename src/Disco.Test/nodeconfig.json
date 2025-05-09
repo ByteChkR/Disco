@@ -1,0 +1,20 @@
+{
+  "Name": "Debugging",
+  "Capabilities": [ ],
+  "Workers": [
+    {
+      "Name": "Default",
+      "Replicas": 100,
+      "Capabilities": [
+        "disco://pool/default"
+      ]
+    },
+    {
+      "Name": "HighPriority",
+      "Replicas": 50,
+      "Capabilities": [
+        "disco://pool/high"
+      ]
+    }
+  ]
+}

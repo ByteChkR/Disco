@@ -9,12 +9,14 @@ namespace Disco.Core.Worker;
 public class DiscoWorker
 {
     private readonly IDiscoTaskQueue _queue;
+    private readonly string[] _capabilities;
     private readonly List<DiscoTaskRunner> _taskRunners = new();
 
-    public DiscoWorker(DiscoWorkerInfo workerInfo, IDiscoTaskQueue queue)
+    public DiscoWorker(DiscoWorkerInfo workerInfo, IDiscoTaskQueue queue, string[] capabilities)
     {
         WorkerInfo = workerInfo;
         _queue = queue;
+        _capabilities = capabilities;
     }
 
     public bool IsIdle { get; private set; }
@@ -22,7 +24,7 @@ public class DiscoWorker
     public bool IsStopping { get; private set; }
 
     public DiscoWorkerInfo WorkerInfo { get; }
-    public DiscoWorkerCapabilities Capabilities => new(WorkerInfo, _taskRunners.Select(x => x.Name).ToArray());
+    public DiscoWorkerCapabilities Capabilities => new(WorkerInfo, _capabilities.Concat(_taskRunners.Select(x => $"disco://v1/capabilities/task/{x.Name}")).ToArray());
 
     public DiscoWorker AddRunner(params IEnumerable<DiscoTaskRunner> runner)
     {
@@ -68,6 +70,7 @@ public class DiscoWorker
                 IsIdle = false;
                 JToken data;
                 TraceSessionData? traceSessionData = null;
+                bool isError = false;
                 await using (var session = CreateSession(task)
                                  .AddSessionFinishedHandler((_, d) => traceSessionData = d))
                 {
@@ -83,12 +86,13 @@ public class DiscoWorker
                     catch (Exception e)
                     {
                         data = JToken.FromObject(e);
+                        isError = true;
                     }
                 }
 
                 if (traceSessionData == null) throw new InvalidOperationException("Trace session data is null");
 
-                var result = new DiscoResult(task.Id, false, data, traceSessionData);
+                var result = new DiscoResult(task.Id, isError, data, traceSessionData);
 
                 await _queue.SubmitResult(result);
             }

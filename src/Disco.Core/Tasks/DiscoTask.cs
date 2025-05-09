@@ -25,7 +25,7 @@ public class DiscoTask : IComparable<DiscoTask>
     private static readonly Stopwatch _stopwatch = Stopwatch.StartNew();
     public bool CanRunOn(DiscoWorkerCapabilities capabilities)
     {
-        var required = new[]{TaskRunnerName}.Concat(AdditionalCapabilities);
+        var required = new[]{$"disco://v1/capabilities/task/{TaskRunnerName}"}.Concat(AdditionalCapabilities);
         return required.All(r => capabilities.Capabilities.Contains(r));
     }
 

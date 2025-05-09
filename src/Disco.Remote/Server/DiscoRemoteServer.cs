@@ -134,4 +134,9 @@ internal class DiscoRemoteServer : IDiscoRemoteServer
     {
         _ = Loop(cancellationToken);
     }
+
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        return Loop(cancellationToken);
+    }
 }

@@ -3,7 +3,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Disco.Test.TaskTypes;
 
-internal class AddTask : DiscoTaskRunner
+public class AddTask : DiscoTaskRunner
 {
     public const string NAME = nameof(AddTask);
     public AddTask() : base(NAME)

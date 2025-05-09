@@ -6,6 +6,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Disco.Core", "Disco.Core\Di
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Disco.Remote", "Disco.Remote\Disco.Remote.csproj", "{F20D82C3-BFF1-4C12-B83E-02C0F3B6DBF6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Disco.Server", "Disco.Server\Disco.Server.csproj", "{B467E500-3039-4343-8C98-B0821CD35205}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Disco.Node", "Disco.Node\Disco.Node.csproj", "{D6D8DFE3-4F51-44E8-AA6B-1B331420CB91}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +28,13 @@ Global
 		{F20D82C3-BFF1-4C12-B83E-02C0F3B6DBF6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F20D82C3-BFF1-4C12-B83E-02C0F3B6DBF6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F20D82C3-BFF1-4C12-B83E-02C0F3B6DBF6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B467E500-3039-4343-8C98-B0821CD35205}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B467E500-3039-4343-8C98-B0821CD35205}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B467E500-3039-4343-8C98-B0821CD35205}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B467E500-3039-4343-8C98-B0821CD35205}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D6D8DFE3-4F51-44E8-AA6B-1B331420CB91}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D6D8DFE3-4F51-44E8-AA6B-1B331420CB91}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D6D8DFE3-4F51-44E8-AA6B-1B331420CB91}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D6D8DFE3-4F51-44E8-AA6B-1B331420CB91}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

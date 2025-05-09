@@ -10,12 +10,7 @@
     <ItemGroup>
       <ProjectReference Include="..\Disco.Core\Disco.Core.csproj" />
       <ProjectReference Include="..\Disco.Remote\Disco.Remote.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <None Update="nodeconfig.json">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
+      <ProjectReference Include="..\Disco.Test\Disco.Test.csproj" />
     </ItemGroup>
 
 </Project>

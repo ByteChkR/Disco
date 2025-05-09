@@ -4,7 +4,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Disco.Test.TaskTypes;
 
-internal class WaitForTask : DiscoTaskRunner
+public class WaitForTask : DiscoTaskRunner
 {
     public const string NAME = nameof(WaitForTask);
     public WaitForTask() : base(NAME)

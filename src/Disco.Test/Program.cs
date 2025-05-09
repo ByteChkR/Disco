@@ -4,6 +4,6 @@ internal static class Program
 {
     private static async Task Main(string[] args)
     {
-        await TestWithReturn.Run(args);
+        await TestCluster.Run(args);
     }
 }
