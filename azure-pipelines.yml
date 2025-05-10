@@ -1,0 +1,82 @@
+name: $(Date:yy).$(Date:MM).$(Date:dd).$(Rev:rr)
+
+trigger:
+- master
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+- task: UseDotNet@2
+  displayName: Install .NET
+  inputs:
+    packageType: 'sdk'
+    version: '8.0.x'
+- task: Assembly-Info-NetCore@3
+  displayName: Set Assembly info for Disco.Core
+  inputs:
+    Path: '$(Build.SourcesDirectory)'
+    FileNames: './src/Disco.Core/Disco.Core.csproj'
+    InsertAttributes: false
+    FileEncoding: 'auto'
+    WriteBOM: false
+    PackageId: 'Disco.Core'
+    VersionNumber: '$(Build.BuildNumber)'
+    FileVersionNumber: '$(Build.BuildNumber)'
+    InformationalVersion: '$(Build.BuildNumber)'
+    PackageVersion: '$(Build.BuildNumber)'
+    LogLevel: 'verbose'
+    FailOnWarning: false
+    DisableTelemetry: false
+- task: Assembly-Info-NetCore@3
+  displayName: Set Assembly info for Disco.Remote
+  inputs:
+    Path: '$(Build.SourcesDirectory)'
+    FileNames: './src/Disco.Remote/Disco.Remote.csproj'
+    InsertAttributes: false
+    FileEncoding: 'auto'
+    WriteBOM: false
+    PackageId: 'Disco.Remote'
+    VersionNumber: '$(Build.BuildNumber)'
+    FileVersionNumber: '$(Build.BuildNumber)'
+    InformationalVersion: '$(Build.BuildNumber)'
+    PackageVersion: '$(Build.BuildNumber)'
+    LogLevel: 'verbose'
+    FailOnWarning: false
+    DisableTelemetry: false
+- task: DotNetCoreCLI@2
+  displayName: Restore Projects
+  inputs:
+    command: 'restore'
+    projects: '**/*.csproj'
+    feedsToUse: 'select'
+    vstsFeed: 'e6d52dbd-ece6-4c79-949c-1ee577f0eb25'
+- task: DotNetCoreCLI@2
+  displayName: Build Projects
+  inputs:
+    command: 'build'
+    projects: '**/*.csproj'
+    arguments: '-c Release'
+- task: DotNetCoreCLI@2
+  displayName: Pack Nuget Packages
+  inputs:
+    command: 'pack'
+    packagesToPack: './src/Disco.Core/Disco.Core.csproj'
+    includesymbols: true
+    includesource: true
+    versioningScheme: 'byBuildNumber'
+- task: DotNetCoreCLI@2
+  displayName: Pack Nuget Packages
+  inputs:
+    command: 'pack'
+    packagesToPack: './src/Disco.Remote/Disco.Remote.csproj'
+    includesymbols: true
+    includesource: true
+    versioningScheme: 'byBuildNumber'
+- task: DotNetCoreCLI@2
+  displayName: Publish Nuget Packages
+  inputs:
+    command: 'push'
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
+    nuGetFeedType: 'internal'
+    publishVstsFeed: 'e6d52dbd-ece6-4c79-949c-1ee577f0eb25'
