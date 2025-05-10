@@ -9,7 +9,7 @@ internal class Program
     private static async Task Main(string[] args)
     {
         CancellationTokenSource serverCts = new CancellationTokenSource();
-        string prefix = "http://localhost:4578/";
+        string prefix = "http://*:4578/";
         IDiscoRemoteServer server = DiscoRemote.CreateServer(new DiscoLocalTaskQueue(), prefix);
         await server.StartAsync(serverCts.Token);
     }
