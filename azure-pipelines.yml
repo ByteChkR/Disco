@@ -80,3 +80,8 @@ steps:
     packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
     nuGetFeedType: 'internal'
     publishVstsFeed: 'e6d52dbd-ece6-4c79-949c-1ee577f0eb25'
+
+- task: PowerShell@2
+  displayName: Building Disco.Server Container
+  inputs:
+    filePath: './Create.ps1'
