@@ -31,7 +31,7 @@ if($env:BUILD_BUILDNUMBER)
     echo "Pushing tag '$env:BUILD_BUILDNUMBER'"
     docker tag ewu.disco.server:latest docker.ewu-it.de/ewu.disco.server:$($env:BUILD_BUILDNUMBER)
     docker image push docker.ewu-it.de/ewu.disco.server:$($env:BUILD_BUILDNUMBER)
-    $env:BUILD_BUILDNUMBER > "$($env:BUILD_ARTIFACTSTAGINGDIRECTORY)/backend_tag.txt"
+    $env:BUILD_BUILDNUMBER > "$($env:BUILD_ARTIFACTSTAGINGDIRECTORY)/disco_server_tag.txt"
 }
 
 echo "Build Completed."
@@ -39,5 +39,5 @@ echo "Build Json"
 echo $(get-content ./bin/build.json)
 if($env:BUILD_ARTIFACTSTAGINGDIRECTORY)
 {
-    echo "Tag: $(get-content "$($env:BUILD_ARTIFACTSTAGINGDIRECTORY)/backend_tag.txt")"
+    echo "Tag: $(get-content "$($env:BUILD_ARTIFACTSTAGINGDIRECTORY)/disco_server_tag.txt")"
 }
