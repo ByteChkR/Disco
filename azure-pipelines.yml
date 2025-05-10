@@ -29,7 +29,7 @@ steps:
     PackageVersion: '$(Build.BuildNumber)'
     LogLevel: 'verbose'
     FailOnWarning: false
-    DisableTelemetry: false
+    DisableTelemetry: true
 - task: DotNetCoreCLI@2
   displayName: Restore Projects
   inputs:

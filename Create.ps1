@@ -35,8 +35,6 @@ if($env:BUILD_BUILDNUMBER)
 }
 
 echo "Build Completed."
-echo "Build Json"
-echo $(get-content ./bin/build.json)
 if($env:BUILD_ARTIFACTSTAGINGDIRECTORY)
 {
     echo "Tag: $(get-content "$($env:BUILD_ARTIFACTSTAGINGDIRECTORY)/disco_server_tag.txt")"
