@@ -22,7 +22,7 @@ public class DiscoNodeConfig
 
 public class DiscoNode
 {
-    private readonly Func<DiscoWorkerInfo, IDiscoTaskQueue , string[], DiscoWorker> _workerFactory;
+    private readonly Func<DiscoWorkerInfo, IDiscoTaskQueue , string[], int, DiscoWorker> _workerFactory;
     public readonly List<DiscoWorker> Workers = new();
     private readonly CancellationTokenSource _cts = new();
     private bool _initialized = false;
@@ -33,32 +33,34 @@ public class DiscoNode
     private readonly List<DiscoRunnerRegistration> _runners = new();
     public IDiscoTaskQueue Queue { get; }
 
+    public int TaskWaitDelay { get; }
     private DiscoNodeConfig? _config;
-    public static DiscoNode FromConfig(DiscoNodeConfig config, Func<int, IDiscoTaskQueue>? queue, Func<DiscoWorkerInfo, IDiscoTaskQueue, string[], DiscoWorker>? workerFactory)
+    public static DiscoNode FromConfig(DiscoNodeConfig config, int taskWaitDelay, Func<int, IDiscoTaskQueue>? queue, Func<DiscoWorkerInfo, IDiscoTaskQueue, string[], int, DiscoWorker>? workerFactory)
     {
-        DiscoNode node = new DiscoNode(config.Name, config.Workers.Sum(x => x.Replicas), queue, workerFactory, config.Capabilities);
+        DiscoNode node = new DiscoNode(config.Name, taskWaitDelay, config.Workers.Sum(x => x.Replicas), queue, workerFactory, config.Capabilities);
         node._config = config;
         return node;
     }
 
-    public static DiscoNode FromJson(string json, Func<int, IDiscoTaskQueue>? queue, Func<DiscoWorkerInfo, IDiscoTaskQueue, string[], DiscoWorker>? workerFactory)
+    public static DiscoNode FromJson(string json, int taskWaitDelay, Func<int, IDiscoTaskQueue>? queue, Func<DiscoWorkerInfo, IDiscoTaskQueue, string[], int, DiscoWorker>? workerFactory)
     {
-        return FromConfig(JsonConvert.DeserializeObject<DiscoNodeConfig>(json)!, queue, workerFactory);
+        return FromConfig(JsonConvert.DeserializeObject<DiscoNodeConfig>(json)!, taskWaitDelay, queue, workerFactory);
     }
 
-    public static DiscoNode FromFile(string path, Func<int, IDiscoTaskQueue>? queue, Func<DiscoWorkerInfo, IDiscoTaskQueue, string[], DiscoWorker>? workerFactory)
+    public static DiscoNode FromFile(string path, int taskWaitDelay, Func<int, IDiscoTaskQueue>? queue, Func<DiscoWorkerInfo, IDiscoTaskQueue, string[], int, DiscoWorker>? workerFactory)
     {
-        return FromJson(File.ReadAllText(path), queue, workerFactory);
+        return FromJson(File.ReadAllText(path), taskWaitDelay, queue, workerFactory);
     }
     
-    public DiscoNode(string name, int workerCount, Func<int, IDiscoTaskQueue>? queueFactory, Func<DiscoWorkerInfo, IDiscoTaskQueue, string[], DiscoWorker>? workerFactory, params string[] additionalCapabilities)
+    public DiscoNode(string name, int taskWaitDelay, int workerCount, Func<int, IDiscoTaskQueue>? queueFactory, Func<DiscoWorkerInfo, IDiscoTaskQueue, string[], int, DiscoWorker>? workerFactory, params string[] additionalCapabilities)
     {
         Name = name;
         WorkerCount = workerCount;
         QueueFactory = queueFactory ?? (i => new DiscoLocalTaskQueue());
-        _workerFactory = workerFactory ?? ((info, queue, capabilities) => new DiscoWorker(info, queue, capabilities));
+        _workerFactory = workerFactory ?? ((info, queue, capabilities, waitDelay) => new DiscoWorker(info, queue, capabilities, waitDelay));
         Capabilities = additionalCapabilities;
         Queue = QueueFactory(-1);
+        TaskWaitDelay = taskWaitDelay;
     }
     
     public DiscoNode AddRunner(DiscoRunnerRegistration runner)
@@ -82,7 +84,7 @@ public class DiscoNode
                 for (int i = 0; i < workerConfig.Replicas; i++)
                 {
                     var workerInfo = new DiscoWorkerInfo(Guid.NewGuid(), Name + "-" + workerConfig.Name + +i);
-                    var worker = _workerFactory(workerInfo, QueueFactory(i), workerConfig.Capabilities.Concat(Capabilities).ToArray())
+                    var worker = _workerFactory(workerInfo, QueueFactory(i), workerConfig.Capabilities.Concat(Capabilities).ToArray(), TaskWaitDelay)
                         .AddRunner(_runners);
                     Workers.Add(worker);
                 }
@@ -93,7 +95,7 @@ public class DiscoNode
             for (int i = 0; i < WorkerCount; i++)
             {
                 var workerInfo = new DiscoWorkerInfo(Guid.NewGuid(), Name + "-" + i);
-                var worker = _workerFactory(workerInfo, QueueFactory(i), Capabilities)
+                var worker = _workerFactory(workerInfo, QueueFactory(i), Capabilities, TaskWaitDelay)
                     .AddRunner(_runners);
                 Workers.Add(worker);
             }

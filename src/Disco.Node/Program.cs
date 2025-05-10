@@ -11,7 +11,7 @@ internal class Program
         string prefix = "http://localhost:4578/";
 
         //Configure a Node that will process the tasks
-        DiscoNode node = DiscoNode.FromFile(args[0], i => DiscoRemote.CreateClient(prefix), null)
+        DiscoNode node = DiscoNode.FromFile(args[0],100, i => DiscoRemote.CreateClient(prefix), null)
                                   //Add the WaitForTask Implementation.
                                   //This makes this node capable of accepting tasks of this type
                                   .AddRunner<WaitForTask>(() => new WaitForTask())

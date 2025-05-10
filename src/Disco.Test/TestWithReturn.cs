@@ -16,7 +16,7 @@ internal static class TestWithReturn
         DiscoLocalTaskQueue queue = new DiscoLocalTaskQueue();
 
         //Configure a Node that will process the tasks
-        DiscoNode node = new DiscoNode("Node", 100, i => queue, null)
+        DiscoNode node = new DiscoNode("Node", 100, 100, i => queue, null)
             //Add the WaitForTask Implementation.
             //This makes this node capable of accepting tasks of this type
             .AddRunner<AddTask>(() => new AddTask());
@@ -25,7 +25,7 @@ internal static class TestWithReturn
         node.Run();
 
         AddArgs a = new AddArgs { A = 1, B = 2 };
-        DiscoResult result = await queue.EnqueueAndWait(CancellationToken.None, nameof(AddTask), 1, JToken.FromObject(a));
+        DiscoResult result = await queue.EnqueueAndWait(100,CancellationToken.None, nameof(AddTask), 1, JToken.FromObject(a));
 
         if (result.IsError)
         {

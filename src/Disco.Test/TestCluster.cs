@@ -42,7 +42,7 @@ internal static class TestCluster
         IDiscoTaskQueue client = DiscoRemote.CreateClient(prefix);
         Stopwatch sw = Stopwatch.StartNew();
 
-        DiscoResult result = await client.EnqueueAndWait(CancellationToken.None,
+        DiscoResult result = await client.EnqueueAndWait(100,CancellationToken.None,
                                                          nameof(AddTask),
                                                          0,
                                                          JToken.FromObject(new AddArgs { A = 12312, B = 1231231 }),

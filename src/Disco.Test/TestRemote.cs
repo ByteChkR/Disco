@@ -43,7 +43,7 @@ internal static class TestRemote
         await FillQueue(client, 100);
 
         //Configure a Node that will process the tasks
-        DiscoNode node = new DiscoNode("Node", 100, i => DiscoRemote.CreateClient(prefix), null)
+        DiscoNode node = new DiscoNode("Node", 1000, 100, i => DiscoRemote.CreateClient(prefix), null)
             //Add the WaitForTask Implementation.
             //This makes this node capable of accepting tasks of this type
             .AddRunner<WaitForTask>(() => new WaitForTask());

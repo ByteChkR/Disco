@@ -16,18 +16,6 @@ public class DiscoLocalTaskQueue : IDiscoTaskQueue
         return Task.FromResult(_queue.Count == 0);
     }
 
-    public async Task<DiscoTask> WaitForTask(DiscoWorkerCapabilities capabilities, CancellationToken cancellationToken)
-    {
-        while(!cancellationToken.IsCancellationRequested)
-        {
-            var task = await TryWaitForTask(capabilities, cancellationToken).ConfigureAwait(false);
-            if (task != null) return task;
-            await Task.Delay(100, cancellationToken).ConfigureAwait(false);
-        }
-        
-        throw new OperationCanceledException("Task queue was cancelled");
-    }
-
     public async Task<DiscoTask?> TryWaitForTask(DiscoWorkerCapabilities capabilities, CancellationToken cancellationToken)
     {
         await _semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -70,20 +58,6 @@ public class DiscoLocalTaskQueue : IDiscoTaskQueue
     public Task<DiscoResult?> TryGetResult(Guid taskId)
     {
         return Task.FromResult(_tasks.GetValueOrDefault(taskId));
-    }
-    
-    public async Task<DiscoResult> GetResult(Guid taskId, CancellationToken token)
-    {
-        while(!token.IsCancellationRequested)
-        {
-            if (_tasks.TryGetValue(taskId, out var result))
-            {
-                return result;
-            }
-            await Task.Delay(100, token).ConfigureAwait(false);
-        }
-        
-        throw new OperationCanceledException("Task queue was cancelled");
     }
     
     public Task SubmitResult(DiscoResult result)

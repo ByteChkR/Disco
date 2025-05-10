@@ -12,16 +12,18 @@ public class DiscoWorker
     private readonly string[] _capabilities;
     private readonly List<DiscoRunnerRegistration> _taskRunners = new();
 
-    public DiscoWorker(DiscoWorkerInfo workerInfo, IDiscoTaskQueue queue, string[] capabilities)
+    public DiscoWorker(DiscoWorkerInfo workerInfo, IDiscoTaskQueue queue, string[] capabilities, int taskWaitDelay)
     {
         WorkerInfo = workerInfo;
         _queue = queue;
         _capabilities = capabilities;
+        TaskWaitDelay = taskWaitDelay;
     }
 
     public bool IsIdle { get; private set; }
     public bool IsStopped { get; private set; }
     public bool IsStopping { get; private set; }
+    public int TaskWaitDelay { get; }
 
     public DiscoWorkerInfo WorkerInfo { get; }
     public DiscoWorkerCapabilities Capabilities => new(WorkerInfo, _capabilities.Concat(_taskRunners.Select(x => $"disco://v1/capabilities/task/{x.DiscoTaskType.Name}")).ToArray());
@@ -67,7 +69,12 @@ public class DiscoWorker
             while (!cancellationToken.IsCancellationRequested && !IsStopping)
             {
                 IsIdle = true;
-                var task = await _queue.WaitForTask(Capabilities, cancellationToken).ConfigureAwait(false);
+                var task = await _queue.TryWaitForTask(Capabilities, cancellationToken).ConfigureAwait(false);
+                while (task == null && !cancellationToken.IsCancellationRequested && !IsStopping)
+                {
+                    task = await _queue.TryWaitForTask(Capabilities, cancellationToken).ConfigureAwait(false);
+                    await Task.Delay(TaskWaitDelay, cancellationToken).ConfigureAwait(false);
+                }
                 IsIdle = false;
                 JToken data;
                 TraceSessionData? traceSessionData = null;
