@@ -18,15 +18,12 @@ public class ExecuteGraphArgs
     public JObject[] Inputs { get; set; } = [];
 }
 
-public class ExecuteGraphTask : DiscoTaskRunner
+public class ExecuteGraphTask : IDiscoTaskRunner
 {
-    public const string NAME = nameof(ExecuteGraphTask);
 
-    public ExecuteGraphTask() : base(NAME) { }
-
-    public override Task<JToken> ExecuteAsync(DiscoTask task, DiscoContext context)
+    public Task<JToken> ExecuteAsync(DiscoTask task, DiscoContext context)
     {
-        using ITraceScope scope = context.Session.CreateScope([Name]);
+        using ITraceScope scope = context.Session.CreateScope([task.TaskRunnerName]);
         ExecuteGraphArgs? args = task.Data.ToObject<ExecuteGraphArgs>();
 
         if (args == null)

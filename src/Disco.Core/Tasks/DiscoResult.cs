@@ -1,5 +1,4 @@
 using ewu.trace.Data;
-
 using Newtonsoft.Json.Linq;
 
 namespace Disco.Core.Tasks;

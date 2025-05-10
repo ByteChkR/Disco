@@ -6,15 +6,11 @@ using Newtonsoft.Json.Linq;
 
 namespace Disco.Test.TaskTypes;
 
-public class WaitForTask : DiscoTaskRunner
+public class WaitForTask : IDiscoTaskRunner
 {
-    public const string NAME = nameof(WaitForTask);
-
-    public WaitForTask() : base(NAME) { }
-
-    public override async Task<JToken> ExecuteAsync(DiscoTask task, DiscoContext context)
+    public async Task<JToken> ExecuteAsync(DiscoTask task, DiscoContext context)
     {
-        using ITraceScope scope = context.Session.CreateScope([Name]);
+        using ITraceScope scope = context.Session.CreateScope([task.TaskRunnerName]);
         WaitForArgs? args = task.Data.ToObject<WaitForArgs>();
 
         if (args == null)

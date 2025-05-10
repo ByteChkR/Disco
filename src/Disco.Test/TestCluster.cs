@@ -22,7 +22,7 @@ internal static class TestCluster
             WaitForArgs a = new WaitForArgs { Delay = rnd.Next(100, 1000) };
             //Wait for random time with different priorities
             Console.WriteLine($"Enqueueing Task {i}");
-            await queue.Enqueue(WaitForTask.NAME, rnd.Next(1, 3), JToken.FromObject(a), "disco://pool/default");
+            await queue.Enqueue(nameof(WaitForTask), rnd.Next(1, 3), JToken.FromObject(a), "disco://pool/default");
         }
     }
 
@@ -43,7 +43,7 @@ internal static class TestCluster
         Stopwatch sw = Stopwatch.StartNew();
 
         DiscoResult result = await client.EnqueueAndWait(CancellationToken.None,
-                                                         AddTask.NAME,
+                                                         nameof(AddTask),
                                                          0,
                                                          JToken.FromObject(new AddArgs { A = 12312, B = 1231231 }),
                                                          "disco://pool/high"

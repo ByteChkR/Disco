@@ -1,18 +1,16 @@
 using Disco.Core.Queue;
 using Disco.Core.Tasks;
-
 using ewu.trace;
 using ewu.trace.Data;
-
 using Newtonsoft.Json.Linq;
 
 namespace Disco.Core.Worker;
 
 public class DiscoWorker
 {
-    private readonly string[] _capabilities;
     private readonly IDiscoTaskQueue _queue;
-    private readonly List<DiscoTaskRunner> _taskRunners = new List<DiscoTaskRunner>();
+    private readonly string[] _capabilities;
+    private readonly List<DiscoRunnerRegistration> _taskRunners = new();
 
     public DiscoWorker(DiscoWorkerInfo workerInfo, IDiscoTaskQueue queue, string[] capabilities)
     {
@@ -26,41 +24,23 @@ public class DiscoWorker
     public bool IsStopping { get; private set; }
 
     public DiscoWorkerInfo WorkerInfo { get; }
+    public DiscoWorkerCapabilities Capabilities => new(WorkerInfo, _capabilities.Concat(_taskRunners.Select(x => $"disco://v1/capabilities/task/{x.DiscoTaskType.Name}")).ToArray());
 
-    public DiscoWorkerCapabilities Capabilities => new DiscoWorkerCapabilities(WorkerInfo,
-                                                                               _capabilities
-                                                                                   .Concat(_taskRunners.Select(x =>
-                                                                                                   $"disco://v1/capabilities/task/{x.Name}"
-                                                                                               )
-                                                                                       )
-                                                                                   .ToArray()
-                                                                              );
-
-    public DiscoWorker AddRunner(params IEnumerable<DiscoTaskRunner> runner)
+    public DiscoWorker AddRunner(params IEnumerable<DiscoRunnerRegistration> runner)
     {
         _taskRunners.AddRange(runner);
-
         return this;
     }
-
-    public DiscoWorker AddRunner<T>() where T : DiscoTaskRunner, new()
-    {
-        T runner = new T();
-        _taskRunners.Add(runner);
-
-        return this;
-    }
-
     private ITraceSession CreateSession(DiscoTask task)
     {
         return new TraceSession($"{task.TaskRunnerName}(on {WorkerInfo.Name}) - {task.Id}")
-               .AssociateEntity("TaskId", task.Id)
-               .AssociateEntity("WorkerId", WorkerInfo.Id)
-               .AddData("WorkerName", WorkerInfo.Name)
-               .AddData("TaskRunnerName", task.TaskRunnerName)
-               .AddData("TaskData", task.Data)
-               .ConfigureScopeTimingLogs()
-               .ConfigureDefaultLogFormatter(Console.WriteLine);
+            .AssociateEntity("TaskId", task.Id)
+            .AssociateEntity("WorkerId", WorkerInfo.Id)
+            .AddData("WorkerName", WorkerInfo.Name)
+            .AddData("TaskRunnerName", task.TaskRunnerName)
+            .AddData("TaskData", task.Data)
+            .ConfigureScopeTimingLogs()
+            .ConfigureDefaultLogFormatter(Console.WriteLine);
     }
 
 
@@ -69,22 +49,29 @@ public class DiscoWorker
         IsStopping = true;
     }
 
+    protected virtual Task<JToken> RunTask(DiscoContext context,
+                                          DiscoTask task,
+                                          DiscoRunnerRegistration registration)
+    {
+        var runner = registration.DiscoTaskRunnerFactory?.Invoke();
+        if(runner == null)
+            throw new InvalidOperationException($"No task runner found for {task.TaskRunnerName}");
+        return runner.ExecuteAsync(task, context);
+    }
     public async Task Run(CancellationToken cancellationToken)
     {
         IsStopped = false;
         IsStopping = false;
-
         try
         {
             while (!cancellationToken.IsCancellationRequested && !IsStopping)
             {
                 IsIdle = true;
-                DiscoTask task = await _queue.WaitForTask(Capabilities, cancellationToken).ConfigureAwait(false);
+                var task = await _queue.WaitForTask(Capabilities, cancellationToken).ConfigureAwait(false);
                 IsIdle = false;
                 JToken data;
                 TraceSessionData? traceSessionData = null;
                 bool isError = false;
-
                 ITraceSession session = CreateSession(task)
                     .AddSessionFinishedHandler((_, d) => traceSessionData = d);
 
@@ -93,32 +80,23 @@ public class DiscoWorker
 
                 try
                 {
-                    DiscoTaskRunner? runner = _taskRunners.FirstOrDefault(x => x.Name == task.TaskRunnerName);
-
-                    if (runner == null)
-                    {
+                    var registration = _taskRunners.FirstOrDefault(x => x.DiscoTaskType.Name == task.TaskRunnerName);
+                    if (registration == null)
                         throw new InvalidOperationException($"No task runner found for {task.TaskRunnerName}");
-                    }
 
-                    data = await runner.ExecuteAsync(task, new DiscoContext(session)).ConfigureAwait(false);
+                    data = await RunTask(new DiscoContext(session), task, registration).ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
                     data = JToken.FromObject(e);
                     isError = true;
                 }
-
                 scope.Dispose();
+                session.Dispose();
 
-                await session.DisposeAsync()
-                             .ConfigureAwait(false);
+                if (traceSessionData == null) throw new InvalidOperationException("Trace session data is null");
 
-                if (traceSessionData == null)
-                {
-                    throw new InvalidOperationException("Trace session data is null");
-                }
-
-                DiscoResult result = new DiscoResult(task.Id, isError, data, traceSessionData);
+                var result = new DiscoResult(task.Id, isError, data, traceSessionData);
 
                 await _queue.SubmitResult(result).ConfigureAwait(false);
             }
@@ -130,4 +108,5 @@ public class DiscoWorker
             IsIdle = false;
         }
     }
+    
 }

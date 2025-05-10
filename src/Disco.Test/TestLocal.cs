@@ -16,7 +16,7 @@ internal static class TestLocal
         {
             WaitForArgs a = new WaitForArgs { Delay = rnd.Next(100, 1000) };
             //Wait for random time with different priorities
-            await queue.Enqueue(WaitForTask.NAME, rnd.Next(1, 3), JToken.FromObject(a));
+            await queue.Enqueue(nameof(WaitForTask), rnd.Next(1, 3), JToken.FromObject(a));
         }
     }
 
@@ -30,10 +30,10 @@ internal static class TestLocal
         await FillQueue(queue, 1000);
 
         //Configure a Node that will process the tasks
-        DiscoNode node = new DiscoNode("Node", 100, i => queue)
+        DiscoNode node = new DiscoNode("Node", 100, i => queue, null)
             //Add the WaitForTask Implementation.
             //This makes this node capable of accepting tasks of this type
-            .AddRunner<WaitForTask>();
+            .AddRunner<WaitForTask>(() => new WaitForTask());
 
         //Start the node
         node.Run();

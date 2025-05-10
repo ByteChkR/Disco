@@ -83,7 +83,7 @@ internal class DiscoRemoteTaskQueue : IDiscoTaskQueue
         throw new Exception("Error while waiting for task");
     }
 
-    public async Task<Guid> Enqueue(string taskRunnerName,
+    public async Task<Guid> Enqueue(Guid id, string taskRunnerName,
                                     int priority,
                                     JToken data,
                                     params string[] additionalCapabilities)
@@ -91,7 +91,7 @@ internal class DiscoRemoteTaskQueue : IDiscoTaskQueue
         // POST /queue/enqueue/<id>
         // => Body is DiscoTask
         // => Returns 200
-        DiscoTask task = new DiscoTask(Guid.NewGuid(), taskRunnerName, data, priority, additionalCapabilities);
+        DiscoTask task = new DiscoTask(id, taskRunnerName, data, priority, additionalCapabilities);
 
         HttpResponseMessage response =
             await _client.PostAsync("/queue/enqueue", new StringContent(JsonConvert.SerializeObject(task.ToDto()))).ConfigureAwait(false);

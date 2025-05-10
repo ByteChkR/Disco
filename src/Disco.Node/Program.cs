@@ -11,12 +11,12 @@ internal class Program
         string prefix = "http://localhost:4578/";
 
         //Configure a Node that will process the tasks
-        DiscoNode node = DiscoNode.FromFile(args[0], i => DiscoRemote.CreateClient(prefix))
+        DiscoNode node = DiscoNode.FromFile(args[0], i => DiscoRemote.CreateClient(prefix), null)
                                   //Add the WaitForTask Implementation.
                                   //This makes this node capable of accepting tasks of this type
-                                  .AddRunner<WaitForTask>()
-                                  .AddRunner<AddTask>()
-                                  .AddRunner<ExecuteGraphTask>();
+                                  .AddRunner<WaitForTask>(() => new WaitForTask())
+                                  .AddRunner<AddTask>(() => new AddTask())
+                                  .AddRunner<ExecuteGraphTask>(() => new ExecuteGraphTask());
 
         //Start the node
         await node.Run();
